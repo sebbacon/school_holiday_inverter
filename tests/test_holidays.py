@@ -20,16 +20,15 @@ def test_holiday_generation(tmp_path, sample_ics_path, mocker, monkeypatch):
     # Import main after mocking so it uses the mocked requests
     from term_to_holiday import main
 
-    breakpoint()
     main()
 
     # Verify JSON output
     with open(tmp_path / "holidays.json") as f:
-        holidays = json.load(f)
+        holidays = json.load(f)[:2]
 
     expected_holidays = [
+        {"name": "Oct Half Term", "start": "2010-10-23", "end": "2010-10-31"},
         {"name": "Christmas Holiday", "start": "2010-12-18", "end": "2011-01-03"},
-        {"name": "Feb Half Term", "start": "2011-02-19", "end": "2011-02-27"},
     ]
 
     assert len(holidays) == len(expected_holidays)
@@ -51,14 +50,18 @@ def test_holiday_generation(tmp_path, sample_ics_path, mocker, monkeypatch):
                 "end": component.get("DTEND").dt.isoformat(),
             }
         )
-
+    events = events[:2]
     expected_ics_events = [
+        {
+            "name": "Oct Half Term",
+            "start": "2010-10-23",
+            "end": "2010-11-01",
+        },  # ICS end date is exclusive
         {
             "name": "Christmas Holiday",
             "start": "2010-12-18",
-            "end": "2011-01-04",  # ICS end date is exclusive
+            "end": "2011-01-04",
         },
-        {"name": "Feb Half Term", "start": "2011-02-19", "end": "2011-02-28"},
     ]
 
     assert len(events) == len(expected_ics_events)

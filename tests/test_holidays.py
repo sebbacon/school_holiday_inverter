@@ -20,6 +20,7 @@ def test_holiday_generation(tmp_path, sample_ics_path, mocker, monkeypatch):
     # Import main after mocking so it uses the mocked requests
     from term_to_holiday import main
 
+    breakpoint()
     main()
 
     # Verify JSON output

@@ -1,9 +1,9 @@
 import re
 import json
-import datetime
 import uuid
 import requests
 from icalendar import Calendar, Event
+from datetime import datetime, timedelta, timezone
 
 
 def fetch_calendar_data(url):
@@ -37,8 +37,17 @@ def parse_terms(ics_data):
                 "summary": summary,
             }
         )
+    sorted_terms = sorted(
+        terms,
+        key=lambda x: (
+            x["start"].date() if isinstance(x["start"], datetime) else x["start"]
+        ),
+    )
+    return sorted_terms
 
-    return sorted(terms, key=lambda x: x["start"])
+
+def as_date(value):
+    return value.date() if isinstance(value, datetime) else value
 
 
 def generate_holidays(sorted_terms):
@@ -68,10 +77,10 @@ def generate_holidays(sorted_terms):
 
         # Calculate holiday period
         holiday_start = prev_term["end"]
-        holiday_end = next_term["start"] - datetime.timedelta(days=1)
+        holiday_end = next_term["start"] - timedelta(days=1)
 
         # Ensure valid date range
-        if holiday_start <= holiday_end:
+        if as_date(holiday_start) <= as_date(holiday_end):
             holidays.append(
                 {"name": holiday_name, "start": holiday_start, "end": holiday_end}
             )
@@ -84,9 +93,9 @@ def generate_holidays(sorted_terms):
             for term in sorted_terms:
                 if term["term_number"] == 1 and term["start"].year == next_year:
                     holiday_start = last_term["end"]
-                    holiday_end = term["start"] - datetime.timedelta(days=1)
+                    holiday_end = term["start"] - timedelta(days=1)
 
-                    if holiday_start <= holiday_end:
+                    if as_date(holiday_start) <= as_date(holiday_end):
                         holidays.append(
                             {
                                 "name": holiday_names[6],  # Summer Holiday
@@ -133,7 +142,7 @@ def write_ics_output(holidays, filename="holidays.ics"):
 
         # Set start and end dates (end date is exclusive in ICS)
         start_date = holiday["start"]
-        end_date = holiday["end"] + datetime.timedelta(days=1)
+        end_date = holiday["end"] + timedelta(days=1)
 
         event.add("dtstart", start_date)
         event.add("dtend", end_date)
@@ -143,12 +152,12 @@ def write_ics_output(holidays, filename="holidays.ics"):
         event["dtend"].params["value"] = "DATE"
 
         # Add other required fields
-        event.add("dtstamp", datetime.datetime.now(datetime.timezone.utc))
+        event.add("dtstamp", datetime.now(timezone.utc))
         event.add("uid", str(uuid.uuid4()))
         event.add("class", "PUBLIC")
-        event.add("created", datetime.datetime.now(datetime.timezone.utc))
+        event.add("created", datetime.now(timezone.utc))
         event.add("description", "")
-        event.add("last-modified", datetime.datetime.now(datetime.timezone.utc))
+        event.add("last-modified", datetime.now(timezone.utc))
         event.add("sequence", 0)
         event.add("status", "CONFIRMED")
         event.add("transp", "TRANSPARENT")
@@ -164,22 +173,16 @@ def write_ics_output(holidays, filename="holidays.ics"):
 def main():
     url = "https://calendar.google.com/calendar/ical/mv20jri1aefq8qfsetmiui9thk%40group.calendar.google.com/public/basic.ics"
 
-    try:
-        # Fetch and process data
-        ics_data = fetch_calendar_data(url)
-        sorted_terms = parse_terms(ics_data)
-        holidays = generate_holidays(sorted_terms)
+    # Fetch and process data
+    ics_data = fetch_calendar_data(url)
+    sorted_terms = parse_terms(ics_data)
+    holidays = generate_holidays(sorted_terms)
 
-        # Write output files
-        write_json_output(holidays)
-        write_ics_output(holidays)
+    # Write output files
+    write_json_output(holidays)
+    write_ics_output(holidays)
 
-        print(
-            f"Processed {len(sorted_terms)} terms and generated {len(holidays)} holidays"
-        )
-
-    except Exception as e:
-        print(f"Error: {e}")
+    print(f"Processed {len(sorted_terms)} terms and generated {len(holidays)} holidays")
 
 
 if __name__ == "__main__":

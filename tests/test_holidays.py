@@ -9,7 +9,10 @@ def sample_ics_path():
     return Path(__file__).parent / "sample.ics"
 
 
-def test_holiday_generation(tmp_path, sample_ics_path, mocker):
+def test_holiday_generation(tmp_path, sample_ics_path, mocker, monkeypatch):
+    # Change working directory to temp path
+    monkeypatch.chdir(tmp_path)
+    
     # Mock requests.get to return our test ICS data
     mock_get = mocker.patch("requests.get")
     mock_get.return_value.text = sample_ics_path.read_text()
@@ -20,7 +23,7 @@ def test_holiday_generation(tmp_path, sample_ics_path, mocker):
     main()
 
     # Verify JSON output
-    with open("holidays.json") as f:
+    with open(tmp_path / "holidays.json") as f:
         holidays = json.load(f)
 
     expected_holidays = [
@@ -35,7 +38,7 @@ def test_holiday_generation(tmp_path, sample_ics_path, mocker):
         assert actual["end"] == expected["end"]
 
     # Verify ICS output
-    with open("holidays.ics", "rb") as f:
+    with open(tmp_path / "holidays.ics", "rb") as f:
         cal = Calendar.from_ical(f.read())
 
     events = []

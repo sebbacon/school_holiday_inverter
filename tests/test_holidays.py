@@ -12,7 +12,7 @@ def sample_ics_path():
 def test_holiday_generation(tmp_path, sample_ics_path, mocker, monkeypatch):
     # Change working directory to temp path
     monkeypatch.chdir(tmp_path)
-    
+
     # Mock requests.get to return our test ICS data
     mock_get = mocker.patch("requests.get")
     mock_get.return_value.text = sample_ics_path.read_text()
